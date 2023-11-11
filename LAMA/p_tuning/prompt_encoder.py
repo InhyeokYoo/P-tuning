@@ -6,18 +6,18 @@ class PromptEncoder(torch.nn.Module):
     def __init__(self, template, hidden_size, tokenizer, device, args):
         super().__init__()
         self.device = device
-        self.spell_length = sum(template)
+        # self.spell_length = sum(template) # 없어도 됨
         self.hidden_size = hidden_size
         self.tokenizer = tokenizer
         self.args = args
         # ent embedding
         self.cloze_length = template
-        self.cloze_mask = [
+        self.cloze_mask = [ # TODO: 이게 뭐임?
             [1] * self.cloze_length[0]  # first cloze
             + [1] * self.cloze_length[1]  # second cloze
             + [1] * self.cloze_length[2]  # third cloze
         ]
-        self.cloze_mask = torch.LongTensor(self.cloze_mask).bool().to(self.device)
+        self.cloze_mask = torch.LongTensor(self.cloze_mask).bool().to(self.device) # TODO: ????
 
         self.seq_indices = torch.LongTensor(list(range(len(self.cloze_mask[0])))).to(self.device)
         # embedding

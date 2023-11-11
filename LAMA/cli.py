@@ -86,11 +86,23 @@ class Trainer(object):
             either args.use_lm_finetune or args.only_evaluate should be True.""")
 
         # load tokenizer
+        # megatron하고 roberta-large하고 tokenizer가 같음
         tokenizer_src = 'roberta-large' if 'megatron' in self.args.model_name else self.args.model_name
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_src, use_fast=False)
+
+        # Since different pretrained models share distinct vocabularies, to allow direct
+        # comparison, we follow previous wo은k (Shin et al., 2020) to adopt a subset that covers the intersection
+        # of GPT’s and BERT’s vocabularies.
+        # 위 내용은 (Shin et al., 2020)의 다음 부분에 답이 있는 듯.
+        # we subsample the LAMA test set to consist of examples where the object is a single token for both
+        # BERT and RoBERTa (Original-RoBERTa).
+
+        # shared: 29k-vocab
+        # lama: 34k-vocab
         init_vocab(args)
 
         # load datasets and dataloaders
+        # TODO: relation은 뭔지 잘 모르겠음
         self.relation, self.data_path_pre, self.data_path_post = self.get_TREx_parameters()
 
         self.train_data = load_file(join(self.args.data_dir, self.data_path_pre + 'train' + self.data_path_post))
@@ -109,6 +121,7 @@ class Trainer(object):
         self.model = PTuneForLAMA(args, self.device, self.args.template)
 
     def get_TREx_parameters(self):
+        # TODO: relation_id가 뭐임?
         relation = load_file(join(self.args.data_dir, "single_relations/{}.jsonl".format(self.args.relation_id)))[0]
         data_path_pre = "fact-retrieval/original/{}/".format(self.args.relation_id)
         data_path_post = ".jsonl"
@@ -181,7 +194,7 @@ class Trainer(object):
         my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=self.args.decay_rate)
 
         for epoch_idx in range(100):
-            # check early stopping
+            # check early stopping TODO: ???????
             if epoch_idx > -1:
                 dev_loss, dev_hit1 = self.evaluate(epoch_idx, 'Dev')
                 if epoch_idx == 0:

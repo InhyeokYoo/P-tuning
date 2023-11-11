@@ -30,9 +30,13 @@ class PTuneForLAMA(torch.nn.Module):
         # load pre-trained model
         if 'megatron' in self.args.model_name and self.args.use_lm_finetune:
             raise RuntimeError("Can not apply args.use_lm_finetune=True on MegatronLM 11B.")
+        # 모델은 그냥 transformers에서 불러오는 듯
+        # return AutoModelForMaskedLM, AutoTokenizer
         self.model = create_model(self.args)
         self.model = self.model.to(self.device)
         for param in self.model.parameters():
+            # TODO: 근데 freeze는 안 시킴?
+            # -> On LAMA, language models are frozen and only the discrete or continious prompts are tuned
             param.requires_grad = self.args.use_lm_finetune
         self.embeddings = get_embedding_layer(self.args, self.model)
 
@@ -40,6 +44,8 @@ class PTuneForLAMA(torch.nn.Module):
         self.vocab = self.tokenizer.get_vocab()
         self.allowed_vocab_ids = set(self.vocab[k] for k in get_vocab_by_strategy(self.args, self.tokenizer))
 
+        # (3, sub, org_prompt, 3, obj, 3) for bidirectional
+        # (3, sub, org_prompt, 3, obj) for unidirectional
         if 'gpt' in self.args.model_name or 'megatron' in self.args.model_name:
             template = (template[0], template[1], 0)
         self.template = template
